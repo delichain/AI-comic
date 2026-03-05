@@ -1,6 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
+from app.core.database import engine, Base
+from app.models.models import Admin, UserRole
+from app.core.security import get_password_hash
+from app.api import admin, user
+
+# 创建数据库表
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="AI Comic Backend",
@@ -19,15 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 导入路由
-from app.api import admin, user
-from app.core.database import engine, Base
-from app.models.models import Admin
-
-# 创建数据库表
-Base.metadata.create_all(bind=engine)
-
-# 注册路由
+# 注册路由 (必须在导入之后)
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX, tags=["管理后台"])
 app.include_router(user.router, prefix=settings.API_V1_PREFIX, tags=["用户接口"])
 
@@ -50,12 +49,9 @@ def health_check():
 @app.on_event("startup")
 async def startup_event():
     from app.core.database import SessionLocal
-    from app.core.security import get_password_hash
-    from app.models.models import Admin, UserRole
     
     db = SessionLocal()
     try:
-        # 检查是否已有管理员
         admin_count = db.query(Admin).count()
         if admin_count == 0:
             default_admin = Admin(
