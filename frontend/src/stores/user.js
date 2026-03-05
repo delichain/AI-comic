@@ -1,21 +1,13 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import api from '../api'
+import { ref } from 'vue'
+import { auth } from '../api'
 
 export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('token') || '')
   const userInfo = ref(JSON.parse(localStorage.getItem('userInfo') || 'null'))
 
-  const isLoggedIn = computed(() => !!token.value)
-
   async function login(username, password) {
-    const formData = new FormData()
-    formData.append('username', username)
-    formData.append('password', password)
-    
-    const response = await api.post('/auth/login', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    const response = await auth.login(username, password)
     
     token.value = response.access_token
     userInfo.value = response.admin
@@ -26,11 +18,7 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function register(username, email, password) {
-    const response = await api.post('/users', {
-      username,
-      email,
-      password
-    })
+    const response = await auth.register(username, email, password)
     return response
   }
 
@@ -41,20 +29,11 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('userInfo')
   }
 
-  async function getUserProfile() {
-    const response = await api.get('/user/profile')
-    userInfo.value = response
-    localStorage.setItem('userInfo', JSON.stringify(response))
-    return response
-  }
-
   return {
     token,
     userInfo,
-    isLoggedIn,
     login,
     register,
-    logout,
-    getUserProfile
+    logout
   }
 })
