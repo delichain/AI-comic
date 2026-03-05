@@ -57,7 +57,7 @@ def admin_login(username: str, password: str, db: Session = Depends(get_db)):
         "admin": {
             "id": admin.id,
             "username": admin.username,
-            "role": admin.role.value if hasattr(admin.role, 'value') else admin.role,
+            "role": admin.role,
             "is_active": admin.is_active
         }
     }
@@ -139,11 +139,10 @@ def update_user_quota(user_id: int, daily_limit: int = None, monthly_limit: int 
 @router.patch("/users/{user_id}/disable")
 def disable_user(user_id: int, db: Session = Depends(get_db), current_admin: Admin = Depends(get_current_admin)):
     """禁用用户"""
-    from app.models.models import UserStatus
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
-    user.status = UserStatus.DISABLED
+    user.status = "disabled"
     db.commit()
     return {"message": "用户已禁用"}
 
@@ -216,7 +215,6 @@ def get_api_logs(page: int = 1, page_size: int = 20, user_id: int = None, is_err
 @router.get("/stats/users")
 def get_user_stats(db: Session = Depends(get_db), current_admin: Admin = Depends(get_current_admin)):
     """获取用户统计"""
-    from app.models.models import UserStatus
     total = db.query(User).count()
-    active = db.query(User).filter(User.status == UserStatus.ACTIVE).count()
+    active = db.query(User).filter(User.status == "active").count()
     return {"total": total, "active": active}
