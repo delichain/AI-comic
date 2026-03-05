@@ -59,10 +59,10 @@ services:
   frontend:
     image: node:20
     container_name: openclaw-frontend
-    working_dir: /frontend
+    working_dir: /app
     volumes:
-      - ./frontend:/frontend
-    command: bash -c "npm config set registry https://registry.npmmirror.com && npm install && npm run dev -- --host"
+      - ./frontend:/app
+    command: bash -c "npm config set registry https://registry.npmmirror.com && npm install && npm run dev -- --host --port 5173"
     depends_on:
       - backend
     ports:
