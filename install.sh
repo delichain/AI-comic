@@ -45,6 +45,21 @@ DATABASE_URL=mysql+pymysql://app:app123456@mysql:3306/fastapi_pdf
 REDIS_URL=redis://redis:6379/0
 EOF
 
+echo "🐳 正在配置 Docker 国内镜像..."
+mkdir -p /etc/docker
+cat > /etc/docker/daemon.json <<'EOF'
+{
+  "registry-mirrors": [
+    "https://docker.mirrors.ustc.edu.cn",
+    "https://hub-mirror.c.163.com",
+    "https://mirror.baidubce.com"
+  ]
+}
+EOF
+
+systemctl daemon-reload
+systemctl restart docker
+
 echo "🐳 正在启动 Docker 服务..."
 if ! command -v docker &> /dev/null; then
     echo "📥 正在安装 Docker..."
@@ -57,6 +72,20 @@ if ! command -v docker &> /dev/null; then
     apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
     systemctl enable docker
     systemctl start docker
+    
+    # 配置国内镜像
+    mkdir -p /etc/docker
+    cat > /etc/docker/daemon.json <<'EOF'
+{
+  "registry-mirrors": [
+    "https://docker.mirrors.ustc.edu.cn",
+    "https://hub-mirror.c.163.com",
+    "https://mirror.baidubce.com"
+  ]
+}
+EOF
+    systemctl daemon-reload
+    systemctl restart docker
 fi
 
 # 启动服务
