@@ -1,5 +1,5 @@
 #!/bin/bash
-# AI-comic 一键安装脚本
+# AI-comic 一键安装脚本 (修复版)
 # 运行方式: curl -sL https://raw.githubusercontent.com/delichain/AI-comic/main/install.sh | sudo bash
 
 set -e
@@ -21,16 +21,28 @@ fi
 INSTALL_DIR="/opt/ai-comic"
 SERVER_IP=$(hostname -I | awk '{print $1}')
 
-echo "📦 正在下载 AI-Comic..."
+# 清理旧的配置
+echo "🧹 清理旧配置..."
+rm -rf "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-# 下载文件
+echo "📦 正在下载 AI-Comic..."
+
+# 下载文件 - 使用 -L 跟随重定向
 curl -sL "https://raw.githubusercontent.com/delichain/AI-comic/main/docker-compose.yml" -o docker-compose.yml
 curl -sL "https://raw.githubusercontent.com/delichain/AI-comic/main/deploy.sh" -o deploy.sh
 curl -sL "https://raw.githubusercontent.com/delichain/AI-comic/main/README.md" -o README.md
 
-# 设置权限
+# 验证下载
+if [ ! -s docker-compose.yml ]; then
+    echo "❌ 下载失败，请检查网络"
+    exit 1
+fi
+
+# 检查并删除 version 属性（已废弃）
+sed -i '/^version:/d' docker-compose.yml
+
 chmod +x deploy.sh
 
 # 生成环境变量
@@ -46,24 +58,13 @@ DATABASE_URL=mysql+pymysql://app:app123456@mysql:3306/fastapi_pdf
 REDIS_URL=redis://redis:6379/0
 EOF
 
-echo "🐳 正在配置 Docker 国内镜像..."
+echo "🐳 正在配置 Docker..."
 mkdir -p /etc/docker
 
-# 使用 Docker 官方镜像加速 + 国内可访问的 mirror
-cat > /etc/docker/daemon.json <<'EOF'
-{
-  "registry-mirrors": [
-    "https://docker.m.daocloud.io",
-    "https://docker.1ms.run",
-    "https://docker.1ms.eu.org"
-  ]
-}
-EOF
+# 清理旧的 daemon.json（如果有的话）
+rm -f /etc/docker/daemon.json
 
-systemctl daemon-reload
-systemctl restart docker
-
-echo "🐳 正在安装 Docker (如需要)..."
+# Docker 已安装?
 if ! command -v docker &> /dev/null; then
     echo "📥 正在安装 Docker..."
     apt update
@@ -75,23 +76,21 @@ if ! command -v docker &> /dev/null; then
     apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
     systemctl enable docker
     systemctl start docker
-    
-    # 配置国内镜像
-    mkdir -p /etc/docker
-    cat > /etc/docker/daemon.json <<'EOF'
-{
-  "registry-mirrors": [
-    "https://docker.m.daocloud.io",
-    "https://docker.1ms.run",
-    "https://docker.1ms.eu.org"
-  ]
-}
-EOF
-    systemctl daemon-reload
-    systemctl restart docker
 fi
 
-echo "🚀 正在启动服务 (首次拉取可能需要几分钟)..."
+# 重置 Docker registry 配置为空（使用默认官方源）
+echo '{}' > /etc/docker/daemon.json
+systemctl daemon-reload
+systemctl restart docker
+
+# 等待 Docker 重启
+sleep 2
+
+# 测试 Docker
+echo "🔍 测试 Docker..."
+docker info >/dev/null 2>&1 || { echo "❌ Docker 启动失败"; exit 1; }
+
+echo "🚀 正在启动服务..."
 cd "$INSTALL_DIR"
 docker compose up -d
 
