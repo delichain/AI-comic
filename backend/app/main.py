@@ -2,8 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.models.models import Admin, UserRole
 from app.core.security import get_password_hash
+from app.models.models import Admin, UserRole
+
+# 导入路由
 from app.api import admin, user
 
 # 创建数据库表
@@ -26,18 +28,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 注册路由 (必须在导入之后)
+# 注册路由
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX, tags=["管理后台"])
 app.include_router(user.router, prefix=settings.API_V1_PREFIX, tags=["用户接口"])
 
 
 @app.get("/")
 def root():
-    return {
-        "name": "AI Comic Backend",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
+    return {"name": "AI Comic Backend", "version": "1.0.0", "docs": "/docs"}
 
 
 @app.get("/health")
