@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   mysql:
-    image: mysql:8
+    image: registry.cn-hangzhou.aliyuncs.com/library/mysql:8
     container_name: openclaw-mysql
     restart: always
     environment:
@@ -18,14 +18,14 @@ services:
       retries: 5
 
   redis:
-    image: redis:7
+    image: registry.cn-hangzhou.aliyuncs.com/library/redis:7
     container_name: openclaw-redis
     restart: always
     volumes:
       - redis_data:/data
 
   backend:
-    image: python:3.11
+    image: registry.cn-hangzhou.aliyuncs.com/library/python:3.11
     container_name: openclaw-backend
     working_dir: /app
     volumes:
@@ -35,6 +35,8 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       SECRET_KEY: ${SECRET_KEY}
       REDIS_URL: ${REDIS_URL}
+      # 使用国内 pip 源
+      PIP_INDEX_URL: https://mirrors.aliyun.com/pypi/simple/
     depends_on:
       mysql:
         condition: service_healthy
@@ -44,7 +46,7 @@ services:
       - "8000:8000"
 
   worker:
-    image: python:3.11
+    image: registry.cn-hangzhou.aliyuncs.com/library/python:3.11
     container_name: openclaw-worker
     working_dir: /app
     volumes:
@@ -54,17 +56,18 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       SECRET_KEY: ${SECRET_KEY}
       REDIS_URL: ${REDIS_URL}
+      PIP_INDEX_URL: https://mirrors.aliyun.com/pypi/simple/
     depends_on:
       - backend
       - redis
 
   frontend:
-    image: node:20
+    image: registry.cn-hangzhou.aliyuncs.com/library/node:20
     container_name: openclaw-frontend
     working_dir: /frontend
     volumes:
       - ./frontend:/frontend
-    command: bash -c "npm install && npm run dev -- --host"
+    command: bash -c "npm install --registry=https://registry.npmmirror.com && npm run dev -- --host"
     depends_on:
       - backend
     ports:
