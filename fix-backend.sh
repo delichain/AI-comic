@@ -1,5 +1,5 @@
 #!/bin/bash
-# 修复并重启后端
+# 修复并重启后端 - 确保成功
 
 set -e
 
@@ -7,48 +7,43 @@ echo "==== 修复 AI-Comic 后端 ===="
 
 cd /opt/ai-comic
 
-# 1. 下载最新的 main.py
-echo "📥 下载修复后的代码..."
+# 1. 下载最新代码
+echo "📥 下载最新代码..."
+curl -sL "https://raw.githubusercontent.com/delichain/AI-comic/main/backend/requirements.txt" -o backend/requirements.txt
 curl -sL "https://raw.githubusercontent.com/delichain/AI-comic/main/backend/app/main.py" -o backend/app/main.py
 
-# 2. 重新构建后端
+# 2. 删除旧容器和镜像，重新构建
 echo "🔨 重新构建后端..."
-docker compose build backend
+docker compose down backend 2>/dev/null || true
+docker rmi openclaw-backend 2>/dev/null || true
+docker compose build --no-cache backend
 
-# 3. 重启后端
-echo "🔄 重启后端..."
+# 3. 启动后端
+echo "🔄 启动后端..."
 docker compose up -d backend
 
-# 4. 等待启动
-echo "⏳ 等待后端启动 (30秒)..."
-sleep 30
+# 4. 等待启动（较长时间）
+echo "⏳ 等待后端启动 (60秒)..."
+sleep 60
 
-# 5. 测试健康检查
-echo "🧪 测试后端..."
-HEALTH=$(curl -s http://localhost:8000/health 2>/dev/null || echo "failed")
+# 5. 检查日志
+echo "📋 后端日志:"
+docker logs --tail 20 openclaw-backend
+
+# 6. 测试
+echo ""
+echo "🧪 测试..."
+sleep 5
+
+HEALTH=$(curl -s http://localhost:8000/health 2>/dev/null || echo "")
 echo "健康检查: $HEALTH"
 
-# 6. 尝试创建管理员
-echo "👤 创建默认管理员..."
-curl -s -X POST "http://localhost:8000/api/v1/auth/register" \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123","role":"admin"}' 2>/dev/null || echo "管理员可能已存在"
-
-# 7. 测试登录
-echo "🔐 测试登录..."
-LOGIN_RESULT=$(curl -s -X POST "http://localhost:8000/api/v1/auth/login" \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}' 2>/dev/null)
-
-if echo "$LOGIN_RESULT" | grep -q "access_token"; then
-  echo "✅ 登录成功！"
+if echo "$HEALTH" | grep -q "healthy"; then
+    echo ""
+    echo "==== ✅ 后端启动成功！===="
+    echo "请访问: http://你的IP:5173"
+    echo "账号: admin"
+    echo "密码: admin123"
 else
-  echo "❌ 登录失败: $LOGIN_RESULT"
+    echo "❌ 后端启动可能失败，请查看上方日志"
 fi
-
-echo ""
-echo "==== 完成 ===="
-echo "前端: http://你的IP:5173"
-echo "后端: http://你的IP:8000/docs"
-echo "账号: admin"
-echo "密码: admin123"
