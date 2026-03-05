@@ -1,7 +1,8 @@
 import axios from 'axios'
 
+// 开发环境使用相对路径（通过 Vite 代理），生产环境使用后端地址
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || '/api/v1',
+  baseURL: import.meta.env.PROD ? 'http://backend:8000/api/v1' : '/api/v1',
   timeout: 60000
 })
 
