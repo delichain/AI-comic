@@ -19,6 +19,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 INSTALL_DIR="/opt/ai-comic"
+SERVER_IP=$(hostname -I | awk '{print $1}')
 
 echo "📦 正在下载 AI-Comic..."
 mkdir -p "$INSTALL_DIR"
@@ -47,12 +48,14 @@ EOF
 
 echo "🐳 正在配置 Docker 国内镜像..."
 mkdir -p /etc/docker
+
+# 使用 Docker 官方镜像加速 + 国内可访问的 mirror
 cat > /etc/docker/daemon.json <<'EOF'
 {
   "registry-mirrors": [
-    "https://docker.mirrors.ustc.edu.cn",
-    "https://hub-mirror.c.163.com",
-    "https://mirror.baidubce.com"
+    "https://docker.m.daocloud.io",
+    "https://docker.1ms.run",
+    "https://docker.1ms.eu.org"
   ]
 }
 EOF
@@ -60,7 +63,7 @@ EOF
 systemctl daemon-reload
 systemctl restart docker
 
-echo "🐳 正在启动 Docker 服务..."
+echo "🐳 正在安装 Docker (如需要)..."
 if ! command -v docker &> /dev/null; then
     echo "📥 正在安装 Docker..."
     apt update
@@ -78,9 +81,9 @@ if ! command -v docker &> /dev/null; then
     cat > /etc/docker/daemon.json <<'EOF'
 {
   "registry-mirrors": [
-    "https://docker.mirrors.ustc.edu.cn",
-    "https://hub-mirror.c.163.com",
-    "https://mirror.baidubce.com"
+    "https://docker.m.daocloud.io",
+    "https://docker.1ms.run",
+    "https://docker.1ms.eu.org"
   ]
 }
 EOF
@@ -88,14 +91,15 @@ EOF
     systemctl restart docker
 fi
 
-# 启动服务
+echo "🚀 正在启动服务 (首次拉取可能需要几分钟)..."
+cd "$INSTALL_DIR"
 docker compose up -d
 
 echo ""
 echo "✅ 安装完成！"
 echo "===================="
-echo "Backend API: http://$(hostname -I | awk '{print $1}'):8000/docs"
-echo "Frontend:    http://$(hostname -I | awk '{print $1}'):5173"
+echo "Backend API: http://${SERVER_IP}:8000/docs"
+echo "Frontend:    http://${SERVER_IP}:5173"
 echo ""
 echo "查看日志: docker compose logs -f"
 echo "停止服务: docker compose down"
