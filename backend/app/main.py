@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.security import get_password_hash
-from app.models.models import Admin, UserRole
+from app.models.models import Admin
 
 # 导入路由
 from app.api import admin, user
@@ -55,7 +55,7 @@ async def startup_event():
             default_admin = Admin(
                 username="admin",
                 password_hash=get_password_hash("admin123"),
-                role=UserRole.ADMIN,
+                role="admin",
                 is_active=True
             )
             db.add(default_admin)
